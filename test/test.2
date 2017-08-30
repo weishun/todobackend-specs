@@ -1,0 +1,84 @@
+var chai = require('chai'),
+    should = chai.should,
+    expect = chai.expect,
+    Promise = require('bluebird'),
+    request = require('superagent-promise')(require('superagent'), Promise)
+    chaiAsPromised = require('chai-as-promised');
+chai.use(chaiAsPromised);
+var url = process.env.URL || 'http://localhost:8000/todos';
+
+
+describe('Cross Origin Requests', function(){
+  var result;
+
+  before(function() {
+    result = request('OPTIONS', url)
+      .set('Origin', 'http://example.com')
+      .end();
+  });
+     
+  it('should return the correct CORS headers', function() {
+    return assert(result, "header").to.contain.all.keys([
+      'access-control-allow-origin',
+      'access-control-allow-methods',
+      'access-control-allow-headers',
+    ]);
+  });
+
+  it('should allow all origins', function(){
+    result = request('OPTIONS', url)
+      .set('Origin', 'http://example.com')
+      .end()
+      .then( function onResult(result) {
+        console.log('*');
+        console.log( JSON.stringify( result, null, 2));
+      }, function onError(err) {
+        console.log('x');
+        console.log( JSON.stringify( err, null, 2));
+      });
+    return assert(result, "header.access-control-allow-origin").to.equal('*');
+  });
+});
+
+
+/*
+ * Convenience functions
+ */
+
+// POST request with data and return promise
+function post(url, data) {
+  return request.post(url)
+    .set('Content-Type', 'application/json')
+    .set('Accept', 'application/json')
+    .send(data)
+    .end();
+}
+
+// GET request and return promise
+function get(url) {
+  return request.get(url)
+    .set('Accept', 'application/json')
+    .end();
+}
+
+// DELETE request and return promise
+function del(url) {
+  return request.del(url).end();
+}
+
+// UPDATE request with data and return promise
+function updatex(url, method, data) {
+  return request(method, url)
+    .set('Content-Type', 'application/json')
+    .set('Accept', 'application/json')
+    .send(data)
+    .end();
+}
+
+// Resolve promise for property and return expectation
+function assert(result, prop) {
+  retval= expect(result).to.eventually.have.deep.property(prop)
+  console.log( JSON.stringify( result, null, 2));
+  return retval;
+}
+
